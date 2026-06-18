@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BookVoice — AI Book Reader</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=Lora:ital,wght@0,400;0,600;1,400&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-deep: #0c0806;
+    --bg: #150f0a;
+    --bg2: #1e1610;
+    --surface: rgba(30, 22, 16, 0.85);
+    --surface-glass: rgba(35, 26, 18, 0.7);
+    --surface-hover: rgba(40, 30, 20, 0.9);
+    --border: rgba(196, 151, 59, 0.15);
+    --border-light: rgba(196, 151, 59, 0.08);
+    --border-gold: rgba(196, 151, 59, 0.3);
+    --text: #e8dcc8;
+    --text2: #a99880;
+    --text3: #7a6a58;
+    --gold: #c4973b;
+    --gold-bright: #d4a94a;
+    --gold-dim: #8b7234;
+    --gold-glow: rgba(196, 151, 59, 0.12);
+    --gold-glow-strong: rgba(196, 151, 59, 0.25);
+    --burgundy: #5c1a2a;
+    --burgundy-soft: rgba(92, 26, 42, 0.3);
+    --warm-shadow: rgba(10, 6, 4, 0.5);
+    --warm-light: rgba(255, 200, 100, 0.03);
+    --radius: 12px;
+    --radius-sm: 8px;
+    --font-display: 'Cormorant Garamond', 'Georgia', serif;
+    --font-body: 'Lora', 'Georgia', serif;
+    --font-arabic: 'Amiri', 'Traditional Arabic', serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--bg-deep);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* Background ambiance */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 0%, rgba(196,151,59,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 20% 100%, rgba(92,26,42,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 40% at 85% 50%, rgba(196,151,59,0.04) 0%, transparent 50%),
+      radial-gradient(circle at 50% 50%, rgba(30,22,16,1) 0%, rgba(12,8,6,1) 100%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 24px 20px 80px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ─── Header ─────────────────────────────────────────── */
+  .header {
+    text-align: center;
+    padding: 48px 0 36px;
+    position: relative;
+  }
+  .header-ornament {
+    font-family: var(--font-display);
+    color: var(--gold-dim);
+    font-size: 24px;
+    letter-spacing: 12px;
+    margin-bottom: 4px;
+    opacity: 0.6;
+  }
+  .header h1 {
+    font-family: var(--font-display);
+    font-size: 52px;
+    font-weight: 300;
+    color: var(--text);
+    letter-spacing: 4px;
+    line-height: 1.1;
+    text-shadow: 0 2px 20px rgba(196,151,59,0.15);
+  }
+  .header h1 span {
+    background: linear-gradient(135deg, var(--gold), var(--gold-bright), var(--gold));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 600;
+    font-style: italic;
+  }
+  .header .tagline {
+    font-family: var(--font-display);
+    color: var(--text3);
+    font-size: 15px;
+    margin-top: 10px;
+    font-style: italic;
+    letter-spacing: 3px;
+  }
+  .header-line {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 20px;
+  }
+  .header-line .line {
+    width: 60px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
+  }
+  .header-line .diamond {
+    width: 6px;
+    height: 6px;
+    background: var(--gold);
+    transform: rotate(45deg);
+    box-shadow: 0 0 8px rgba(196,151,59,0.4);
+  }
+
+  /* ─── Glass card ─────────────────────────────────────── */
+  .glass-card {
+    background: var(--surface-glass);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow:
+      0 4px 24px var(--warm-shadow),
+      inset 0 1px 0 rgba(255,255,255,0.03);
+    transition: all 0.3s ease;
+  }
+  .glass-card:hover {
+    border-color: var(--border-gold);
+    box-shadow:
+      0 8px 32px var(--warm-shadow),
+      0 0 40px rgba(196,151,59,0.04),
+      inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+
+  /* ─── Upload zone ────────────────────────────────────── */
+  .upload-zone {
+    border: 1.5px dashed var(--border-gold);
+    border-radius: var(--radius);
+    padding: 56px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.4s ease;
+    background: var(--surface-glass);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    position: relative;
+    overflow: hidden;
+  }
+  .upload-zone::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 50%, var(--gold-glow) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+  .upload-zone:hover::before, .upload-zone.dragover::before { opacity: 1; }
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--gold);
+    box-shadow: 0 0 30px rgba(196,151,59,0.1);
+  }
+  .upload-zone input { display: none; }
+  .upload-zone .icon {
+    font-size: 40px;
+    margin-bottom: 16px;
+    position: relative;
+    z-index: 1;
+    filter: sepia(0.8) brightness(0.9);
+  }
+  .upload-zone .label {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--text);
+    position: relative;
+    z-index: 1;
+    letter-spacing: 0.5px;
+  }
+  .upload-zone .sublabel {
+    font-size: 13px;
+    color: var(--text3);
+    margin-top: 8px;
+    font-style: italic;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ─── Book info ──────────────────────────────────────── */
+  .book-info {
+    display: none;
+    text-align: center;
+    padding: 24px;
+    margin-top: 20px;
+  }
+  .book-info.active { display: block; }
+  .book-title {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: 0.5px;
+  }
+  .book-meta {
+    font-size: 13px;
+    color: var(--text3);
+    margin-top: 6px;
+    font-style: italic;
+    letter-spacing: 0.5px;
+  }
+  .load-another {
+    display: inline-block;
+    margin-top: 14px;
+    font-size: 13px;
+    color: var(--gold-dim);
+    cursor: pointer;
+    text-decoration: none;
+    background: none;
+    border: none;
+    font-family: var(--font-display);
+    letter-spacing: 1px;
+    transition: color 0.2s;
+    border-bottom: 1px solid transparent;
+  }
+  .load-another:hover {
+    color: var(--gold);
+    border-bottom-color: var(--gold-dim);
+  }
+
+  /* ─── Controls ───────────────────────────────────────── */
+  .controls {
+    display: none;
+    gap: 16px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+  .controls.active { display: flex; }
+
+  .control-group { flex: 1; min-width: 180px; }
+  .control-group label {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 11px;
+    color: var(--gold-dim);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    font-weight: 600;
+  }
+  .control-group select, .control-group input[type="text"] {
+    width: 100%;
+    padding: 11px 16px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: rgba(20, 14, 10, 0.6);
+    backdrop-filter: blur(10px);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    transition: all 0.3s;
+  }
+  .control-group select { cursor: pointer; }
+  .control-group select:focus, .control-group input:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px var(--gold-glow), 0 0 20px rgba(196,151,59,0.08);
+  }
+
+  /* ─── Chapters ───────────────────────────────────────── */
+  .chapters-panel {
+    display: none;
+    margin-top: 20px;
+    overflow: hidden;
+  }
+  .chapters-panel.active { display: block; }
+  .chapters-header {
+    padding: 14px 24px;
+    font-family: var(--font-display);
+    font-size: 11px;
+    color: var(--gold-dim);
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--border);
+    background: rgba(20, 14, 10, 0.4);
+  }
+  .chapter-list {
+    max-height: 280px;
+    overflow-y: auto;
+  }
+  .chapter-item {
+    padding: 13px 24px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.25s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-light);
+    position: relative;
+  }
+  .chapter-item:last-child { border-bottom: none; }
+  .chapter-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--gold);
+    opacity: 0;
+    transition: opacity 0.25s;
+  }
+  .chapter-item:hover {
+    background: rgba(196,151,59,0.05);
+  }
+  .chapter-item.active {
+    background: var(--gold-glow);
+  }
+  .chapter-item.active::before { opacity: 1; }
+  .chapter-item.active .chapter-title { color: var(--gold-bright); }
+  .chapter-title { color: var(--text); transition: color 0.2s; }
+  .chapter-words {
+    font-size: 12px;
+    color: var(--text3);
+    font-style: italic;
+  }
+
+  /* ─── Player ─────────────────────────────────────────── */
+  .player {
+    display: none;
+    margin-top: 20px;
+    padding: 32px 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .player.active { display: block; }
+  .player::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at 50% 80%, rgba(196,151,59,0.04) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .now-reading {
+    font-family: var(--font-display);
+    font-size: 14px;
+    color: var(--text3);
+    text-align: center;
+    font-style: italic;
+    letter-spacing: 0.5px;
+    position: relative;
+  }
+  .now-reading span {
+    color: var(--text);
+    font-weight: 600;
+    font-style: normal;
+  }
+
+  .player-controls {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    justify-content: center;
+    margin: 28px 0 24px;
+    position: relative;
+  }
+
+  .btn-player {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+    background: rgba(20, 14, 10, 0.5);
+    backdrop-filter: blur(10px);
+    color: var(--text2);
+    font-size: 16px;
+  }
+  .btn-player:hover {
+    border-color: var(--gold);
+    color: var(--gold);
+    box-shadow: 0 0 15px rgba(196,151,59,0.15);
+    transform: scale(1.05);
+  }
+  .btn-player.primary {
+    width: 62px;
+    height: 62px;
+    background: linear-gradient(135deg, var(--gold), var(--gold-bright));
+    border: none;
+    color: var(--bg-deep);
+    font-size: 22px;
+    box-shadow:
+      0 4px 20px rgba(196,151,59,0.3),
+      0 0 40px rgba(196,151,59,0.1);
+  }
+  .btn-player.primary:hover {
+    transform: scale(1.08);
+    box-shadow:
+      0 6px 28px rgba(196,151,59,0.4),
+      0 0 50px rgba(196,151,59,0.15);
+  }
+
+  .progress-bar {
+    width: 100%;
+    height: 4px;
+    background: rgba(196,151,59,0.1);
+    border-radius: 2px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold-dim), var(--gold), var(--gold-bright));
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.1s linear;
+    box-shadow: 0 0 8px rgba(196,151,59,0.3);
+  }
+  .progress-time {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text3);
+    margin-top: 8px;
+    font-style: italic;
+    letter-spacing: 0.5px;
+  }
+
+  /* Speed */
+  .speed-control {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 20px;
+    position: relative;
+  }
+  .speed-control label {
+    font-family: var(--font-display);
+    font-size: 11px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+  .speed-slider {
+    -webkit-appearance: none;
+    width: 130px;
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(196,151,59,0.15);
+    outline: none;
+  }
+  .speed-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--gold);
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(196,151,59,0.4);
+    transition: box-shadow 0.2s;
+  }
+  .speed-slider::-webkit-slider-thumb:hover {
+    box-shadow: 0 0 16px rgba(196,151,59,0.6);
+  }
+  .speed-value {
+    font-size: 13px;
+    color: var(--text2);
+    min-width: 36px;
+  }
+
+  /* Toggle text button */
+  .toggle-text {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 7px 20px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text3);
+    cursor: pointer;
+    font-family: var(--font-display);
+    font-size: 13px;
+    letter-spacing: 1px;
+    transition: all 0.3s;
+  }
+  .toggle-text:hover {
+    border-color: var(--gold);
+    color: var(--gold);
+    box-shadow: 0 0 15px rgba(196,151,59,0.08);
+  }
+
+  /* ─── Text display ───────────────────────────────────── */
+  .text-panel {
+    display: none;
+    margin-top: 20px;
+    padding: 32px;
+    max-height: 360px;
+    overflow-y: auto;
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 2;
+    white-space: pre-wrap;
+    color: var(--text2);
+  }
+  .text-panel.active { display: block; }
+  .text-panel[dir="rtl"] {
+    text-align: right;
+    font-family: var(--font-arabic);
+    font-size: 20px;
+    line-height: 2.2;
+  }
+
+  /* ─── Engine section ─────────────────────────────────── */
+  .engine-section {
+    display: none;
+    margin-top: 20px;
+    padding: 20px 24px;
+  }
+  .engine-section.active { display: block; }
+  .engine-tabs {
+    display: flex;
+    gap: 10px;
+  }
+  .engine-tab {
+    padding: 9px 20px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text3);
+    cursor: pointer;
+    font-family: var(--font-display);
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    transition: all 0.3s;
+  }
+  .engine-tab.active {
+    background: linear-gradient(135deg, var(--gold), var(--gold-bright));
+    color: var(--bg-deep);
+    border-color: transparent;
+    font-weight: 600;
+    box-shadow: 0 2px 12px rgba(196,151,59,0.25);
+  }
+  .engine-tab:hover:not(.active) {
+    border-color: var(--gold);
+    color: var(--gold);
+  }
+  .api-key-input {
+    display: none;
+    margin-top: 14px;
+  }
+  .api-key-input.active { display: block; }
+
+  /* ─── Loading ────────────────────────────────────────── */
+  .loading-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(12,8,6,0.85);
+    backdrop-filter: blur(8px);
+    z-index: 100;
+    justify-content: center;
+    align-items: center;
+  }
+  .loading-overlay.active { display: flex; }
+  .loading-box {
+    background: var(--surface-glass);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 40px 56px;
+    text-align: center;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.4), 0 0 60px rgba(196,151,59,0.06);
+  }
+  .spinner {
+    width: 36px;
+    height: 36px;
+    border: 2px solid var(--border);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 18px;
+  }
+  .loading-box .loading-text {
+    font-family: var(--font-display);
+    color: var(--text2);
+    font-size: 15px;
+    font-style: italic;
+    letter-spacing: 0.5px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ─── Scrollbar ──────────────────────────────────────── */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--gold-dim); }
+
+  /* ─── Footer ─────────────────────────────────────────── */
+  .footer {
+    text-align: center;
+    margin-top: 56px;
+    position: relative;
+  }
+  .footer-line {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .footer-line .line {
+    width: 40px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+  }
+  .footer-line .dot {
+    width: 4px;
+    height: 4px;
+    background: var(--gold-dim);
+    border-radius: 50%;
+  }
+  .footer p {
+    font-family: var(--font-display);
+    font-size: 13px;
+    color: var(--text3);
+    font-style: italic;
+    letter-spacing: 2px;
+    opacity: 0.7;
+  }
+
+  /* ─── Fade-in animation ──────────────────────────────── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .book-info.active,
+  .controls.active,
+  .chapters-panel.active,
+  .player.active,
+  .engine-section.active {
+    animation: fadeUp 0.4s ease-out;
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-ornament">✦ ✦ ✦</div>
+    <h1>Book<span>Voice</span></h1>
+    <p class="tagline">English · Français · العربية</p>
+    <div class="header-line">
+      <div class="line"></div>
+      <div class="diamond"></div>
+      <div class="line"></div>
+    </div>
+  </div>
+
+  <!-- Upload -->
+  <div class="upload-zone" id="uploadZone">
+    <input type="file" id="fileInput" accept=".pdf,.epub,.txt">
+    <div class="icon">📖</div>
+    <div class="label">Drop a book here or click to browse</div>
+    <div class="sublabel">PDF, EPUB, or TXT — up to 200 MB</div>
+  </div>
+
+  <!-- Book info -->
+  <div class="glass-card book-info" id="bookInfo">
+    <div class="book-title" id="bookTitle"></div>
+    <div class="book-meta" id="bookMeta"></div>
+    <button class="load-another" onclick="document.getElementById('uploadZone').click()">Load another book</button>
+  </div>
+
+  <!-- Engine -->
+  <div class="glass-card engine-section" id="engineSection">
+    <div class="engine-tabs">
+      <button class="engine-tab active" data-engine="edge" onclick="setEngine('edge', this)">Edge TTS (Free)</button>
+      <button class="engine-tab" data-engine="openai" onclick="setEngine('openai', this)">OpenAI TTS-HD</button>
+    </div>
+    <div class="api-key-input" id="apiKeyInput">
+      <div class="control-group">
+        <label>OpenAI API Key</label>
+        <input type="text" id="openaiKey" placeholder="sk-...">
+      </div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls" id="controls">
+    <div class="control-group">
+      <label>Language</label>
+      <select id="langSelect" onchange="updateVoices()">
+        <option value="en">English</option>
+        <option value="fr">Français</option>
+        <option value="ar">العربية</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label>Voice</label>
+      <select id="voiceSelect"></select>
+    </div>
+  </div>
+
+  <!-- Chapters -->
+  <div class="glass-card chapters-panel" id="chaptersPanel">
+    <div class="chapters-header">Chapters</div>
+    <div class="chapter-list" id="chapterList"></div>
+  </div>
+
+  <!-- Player -->
+  <div class="glass-card player" id="player">
+    <div class="now-reading">
+      Now reading: <span id="nowReadingTitle">—</span>
+    </div>
+    <div class="player-controls">
+      <button class="btn-player" onclick="prevChapter()" title="Previous">⏮</button>
+      <button class="btn-player primary" id="playBtn" onclick="togglePlay()" title="Play">▶</button>
+      <button class="btn-player" onclick="nextChapter()" title="Next">⏭</button>
+    </div>
+    <div class="progress-bar" id="progressBar" onclick="seekAudio(event)">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <div class="progress-time">
+      <span id="currentTime">0:00</span>
+      <span id="totalTime">0:00</span>
+    </div>
+    <div class="speed-control">
+      <label>Speed</label>
+      <input type="range" class="speed-slider" id="speedSlider" min="0.5" max="2.0" step="0.1" value="1.0" oninput="updateSpeed()">
+      <span class="speed-value" id="speedValue">1.0×</span>
+    </div>
+    <div style="text-align:center">
+      <button class="toggle-text" id="toggleTextBtn" onclick="toggleTextPanel()">Show text</button>
+    </div>
+  </div>
+
+  <!-- Text display -->
+  <div class="glass-card text-panel" id="textPanel"></div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="footer-line">
+      <div class="line"></div>
+      <div class="dot"></div>
+      <div class="line"></div>
+    </div>
+    <p>A personal library, read aloud</p>
+  </div>
+</div>
+
+<!-- Loading -->
+<div class="loading-overlay" id="loading">
+  <div class="loading-box">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loadingMsg">Preparing your reading…</div>
+  </div>
+</div>
+
+<script>
+let bookId=null,chapters=[],currentChapter=0,voices={},engine="edge",audioQueue=[],currentPartIdx=0,isPlaying=false,currentAudio=null;
+const uploadZone=document.getElementById("uploadZone"),fileInput=document.getElementById("fileInput");
+uploadZone.addEventListener("click",()=>fileInput.click());
+uploadZone.addEventListener("dragover",e=>{e.preventDefault();uploadZone.classList.add("dragover")});
+uploadZone.addEventListener("dragleave",()=>uploadZone.classList.remove("dragover"));
+uploadZone.addEventListener("drop",e=>{e.preventDefault();uploadZone.classList.remove("dragover");if(e.dataTransfer.files.length)handleFile(e.dataTransfer.files[0])});
+fileInput.addEventListener("change",()=>{if(fileInput.files.length)handleFile(fileInput.files[0])});
+
+async function handleFile(file){
+  showLoading("Opening your book…");
+  const fd=new FormData();fd.append("file",file);
+  try{
+    const r=await fetch("/api/upload",{method:"POST",body:fd});const d=await r.json();
+    if(d.error){alert(d.error);hideLoading();return}
+    bookId=d.book_id;chapters=d.chapters;
+    document.getElementById("bookTitle").textContent=d.filename;
+    const tw=Math.round(d.total_chars/5),rt=Math.round(tw/200);
+    document.getElementById("bookMeta").textContent=`${chapters.length} chapters · ~${tw.toLocaleString()} words · ~${rt} min read`;
+    ["bookInfo","engineSection","controls","chaptersPanel","player"].forEach(id=>document.getElementById(id).classList.add("active"));
+    renderChapters();selectChapter(0);hideLoading();
+  }catch(e){alert("Upload failed: "+e.message);hideLoading()}
+}
+
+fetch("/api/voices").then(r=>r.json()).then(d=>{voices=d;updateVoices()});
+function updateVoices(){
+  const l=document.getElementById("langSelect").value,s=document.getElementById("voiceSelect");s.innerHTML="";
+  if(voices[l])voices[l].voices.forEach(v=>{const o=document.createElement("option");o.value=v.id;o.textContent=v.name;s.appendChild(o)});
+  document.getElementById("textPanel")[l==="ar"?"setAttribute":"removeAttribute"]("dir","rtl");
+}
+function setEngine(e,b){engine=e;document.querySelectorAll(".engine-tab").forEach(t=>t.classList.remove("active"));b.classList.add("active");document.getElementById("apiKeyInput").classList.toggle("active",e==="openai")}
+
+function renderChapters(){
+  const l=document.getElementById("chapterList");l.innerHTML="";
+  chapters.forEach((c,i)=>{const d=document.createElement("div");d.className="chapter-item"+(i===currentChapter?" active":"");
+  d.innerHTML=`<span class="chapter-title">${c.title}</span><span class="chapter-words">${Math.round(c.char_count/5)} words</span>`;d.onclick=()=>selectChapter(i);l.appendChild(d)});
+}
+async function selectChapter(i){
+  currentChapter=i;renderChapters();document.getElementById("nowReadingTitle").textContent=chapters[i].title;
+  try{const r=await fetch(`/api/chapter-text/${bookId}/${i}`);const d=await r.json();document.getElementById("textPanel").textContent=d.text}catch(e){}
+  stopAudio();
+}
+
+async function synthesizeChapter(){
+  showLoading("Preparing your reading…");
+  const v=document.getElementById("voiceSelect").value,sp=parseFloat(document.getElementById("speedSlider").value),ak=document.getElementById("openaiKey")?.value||"";
+  try{
+    const r=await fetch("/api/synthesize",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({book_id:bookId,chapter_idx:currentChapter,voice:v,speed:sp,engine,api_key:ak,openai_voice:"nova"})});
+    const d=await r.json();if(d.error){alert(d.error);hideLoading();return null}
+    audioQueue=[];if(d.audio_ids)d.audio_ids.forEach(id=>audioQueue.push(new Audio(`/api/audio/${id}`)));else if(d.audio_id)audioQueue.push(new Audio(`/api/audio/${d.audio_id}`));
+    hideLoading();return audioQueue;
+  }catch(e){alert("Synthesis failed: "+e.message);hideLoading();return null}
+}
+
+async function togglePlay(){if(isPlaying){pauseAudio();return}if(audioQueue.length===0){const r=await synthesizeChapter();if(!r)return}playAudio()}
+function playAudio(){
+  if(currentPartIdx>=audioQueue.length)currentPartIdx=0;isPlaying=true;document.getElementById("playBtn").textContent="⏸";
+  currentAudio=audioQueue[currentPartIdx];currentAudio.playbackRate=parseFloat(document.getElementById("speedSlider").value);
+  currentAudio.ontimeupdate=()=>updateProgress();
+  currentAudio.onended=()=>{currentPartIdx++;if(currentPartIdx<audioQueue.length)playAudio();else if(currentChapter<chapters.length-1){currentPartIdx=0;audioQueue=[];selectChapter(currentChapter+1);togglePlay()}else stopAudio()};
+  currentAudio.play().catch(e=>console.error("Play error:",e));
+}
+function pauseAudio(){if(currentAudio)currentAudio.pause();isPlaying=false;document.getElementById("playBtn").textContent="▶"}
+function stopAudio(){if(currentAudio){currentAudio.pause();currentAudio.currentTime=0}isPlaying=false;currentPartIdx=0;audioQueue=[];document.getElementById("playBtn").textContent="▶";document.getElementById("progressFill").style.width="0%";document.getElementById("currentTime").textContent="0:00";document.getElementById("totalTime").textContent="0:00"}
+
+function updateProgress(){
+  if(!currentAudio||!currentAudio.duration)return;let td=0,eb=0;
+  audioQueue.forEach((a,i)=>{if(a.duration)td+=a.duration;if(i<currentPartIdx&&a.duration)eb+=a.duration});
+  const ce=eb+currentAudio.currentTime,p=td>0?(ce/td)*100:0;
+  document.getElementById("progressFill").style.width=p+"%";document.getElementById("currentTime").textContent=formatTime(ce);document.getElementById("totalTime").textContent=formatTime(td);
+}
+function seekAudio(e){if(!currentAudio||!currentAudio.duration)return;const b=document.getElementById("progressBar").getBoundingClientRect();currentAudio.currentTime=((e.clientX-b.left)/b.width)*currentAudio.duration}
+function formatTime(s){if(!s||isNaN(s))return"0:00";return`${Math.floor(s/60)}:${Math.floor(s%60).toString().padStart(2,"0")}`}
+function updateSpeed(){const v=parseFloat(document.getElementById("speedSlider").value);document.getElementById("speedValue").textContent=v.toFixed(1)+"×";if(currentAudio)currentAudio.playbackRate=v}
+function prevChapter(){if(currentChapter>0){stopAudio();selectChapter(currentChapter-1)}}
+function nextChapter(){if(currentChapter<chapters.length-1){stopAudio();selectChapter(currentChapter+1)}}
+function toggleTextPanel(){const p=document.getElementById("textPanel"),b=document.getElementById("toggleTextBtn");p.classList.toggle("active");b.textContent=p.classList.contains("active")?"Hide text":"Show text"}
+function showLoading(m){document.getElementById("loadingMsg").textContent=m||"Loading…";document.getElementById("loading").classList.add("active")}
+function hideLoading(){document.getElementById("loading").classList.remove("active")}
+</script>
+</body>
+</html>

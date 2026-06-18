@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BookVoice — Your Books, Read Aloud by AI</title>
+<meta name="description" content="Free AI book reader. Upload any PDF, EPUB, or TXT and listen in English, French, or Arabic with state-of-the-art neural voices.">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=Lora:ital,wght@0,400;0,600;1,400&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-deep: #0c0806;
+    --bg: #150f0a;
+    --surface: rgba(30, 22, 16, 0.85);
+    --surface-glass: rgba(35, 26, 18, 0.7);
+    --border: rgba(196, 151, 59, 0.15);
+    --border-gold: rgba(196, 151, 59, 0.3);
+    --text: #e8dcc8;
+    --text2: #a99880;
+    --text3: #7a6a58;
+    --gold: #c4973b;
+    --gold-bright: #d4a94a;
+    --gold-dim: #8b7234;
+    --gold-glow: rgba(196, 151, 59, 0.12);
+    --font-display: 'Cormorant Garamond', 'Georgia', serif;
+    --font-body: 'Lora', 'Georgia', serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: var(--font-body);
+    background: var(--bg-deep);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 0%, rgba(196,151,59,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 20% 100%, rgba(92,26,42,0.06) 0%, transparent 60%),
+      radial-gradient(circle at 50% 50%, rgba(30,22,16,1) 0%, rgba(12,8,6,1) 100%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .page { position: relative; z-index: 1; }
+
+  /* ─── Hero ─────────────────────────────────────────── */
+  .hero {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 80px 24px 60px;
+    text-align: center;
+  }
+  .hero-ornament {
+    font-family: var(--font-display);
+    color: var(--gold-dim);
+    font-size: 20px;
+    letter-spacing: 12px;
+    opacity: 0.6;
+    margin-bottom: 8px;
+  }
+  .hero h1 {
+    font-family: var(--font-display);
+    font-size: 56px;
+    font-weight: 300;
+    line-height: 1.15;
+    letter-spacing: 1px;
+    margin-bottom: 20px;
+  }
+  .hero h1 em {
+    background: linear-gradient(135deg, var(--gold), var(--gold-bright));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-style: italic;
+    font-weight: 600;
+  }
+  .hero .subtitle {
+    font-family: var(--font-display);
+    font-size: 20px;
+    color: var(--text2);
+    font-style: italic;
+    letter-spacing: 0.5px;
+    max-width: 500px;
+    margin: 0 auto 12px;
+  }
+  .hero .sub2 {
+    font-size: 15px;
+    color: var(--text3);
+    font-style: italic;
+    margin-bottom: 40px;
+  }
+
+  .hero-line {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin: 32px auto;
+  }
+  .hero-line .line {
+    width: 50px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
+  }
+  .hero-line .diamond {
+    width: 6px;
+    height: 6px;
+    background: var(--gold);
+    transform: rotate(45deg);
+    box-shadow: 0 0 8px rgba(196,151,59,0.4);
+  }
+
+  /* ─── Email form ───────────────────────────────────── */
+  .signup-card {
+    max-width: 480px;
+    margin: 0 auto;
+    background: var(--surface-glass);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 36px 32px;
+    box-shadow: 0 8px 40px rgba(10,6,4,0.5), 0 0 60px rgba(196,151,59,0.04);
+  }
+  .signup-card h3 {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 400;
+    text-align: center;
+    margin-bottom: 6px;
+    letter-spacing: 0.5px;
+  }
+  .signup-card .note {
+    text-align: center;
+    font-size: 13px;
+    color: var(--text3);
+    font-style: italic;
+    margin-bottom: 24px;
+  }
+  .form-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .form-row input {
+    flex: 1;
+    padding: 13px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: rgba(20, 14, 10, 0.6);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    outline: none;
+    transition: all 0.3s;
+  }
+  .form-row input::placeholder { color: var(--text3); }
+  .form-row input:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px var(--gold-glow);
+  }
+  .btn-signup {
+    width: 100%;
+    padding: 14px 24px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--gold), var(--gold-bright));
+    color: var(--bg-deep);
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 20px rgba(196,151,59,0.3);
+  }
+  .btn-signup:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 28px rgba(196,151,59,0.4);
+  }
+  .btn-signup:active { transform: translateY(0); }
+  .form-privacy {
+    text-align: center;
+    font-size: 12px;
+    color: var(--text3);
+    margin-top: 14px;
+    font-style: italic;
+  }
+  .signup-success {
+    display: none;
+    text-align: center;
+    padding: 20px 0;
+  }
+  .signup-success .check {
+    font-size: 40px;
+    margin-bottom: 12px;
+  }
+  .signup-success h3 {
+    font-family: var(--font-display);
+    font-size: 22px;
+    margin-bottom: 8px;
+  }
+  .signup-success p {
+    color: var(--text2);
+    font-size: 14px;
+  }
+  .signup-success .btn-enter {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 12px 32px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--gold), var(--gold-bright));
+    color: var(--bg-deep);
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 600;
+    text-decoration: none;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 20px rgba(196,151,59,0.3);
+    transition: all 0.3s;
+  }
+  .signup-success .btn-enter:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 28px rgba(196,151,59,0.4);
+  }
+
+  /* ─── Features ─────────────────────────────────────── */
+  .features {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 60px 24px;
+  }
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+  @media (max-width: 600px) {
+    .features-grid { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 38px; }
+    .form-row { flex-direction: column; }
+  }
+  .feature-card {
+    background: var(--surface-glass);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 28px 20px;
+    text-align: center;
+    transition: all 0.3s;
+  }
+  .feature-card:hover {
+    border-color: var(--border-gold);
+    box-shadow: 0 4px 24px rgba(10,6,4,0.3), 0 0 30px rgba(196,151,59,0.04);
+    transform: translateY(-2px);
+  }
+  .feature-icon {
+    font-size: 28px;
+    margin-bottom: 14px;
+    filter: sepia(0.6) brightness(0.9);
+  }
+  .feature-title {
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 8px;
+    letter-spacing: 0.3px;
+  }
+  .feature-desc {
+    font-size: 13px;
+    color: var(--text3);
+    line-height: 1.6;
+  }
+
+  /* ─── Comparison ───────────────────────────────────── */
+  .comparison {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px 24px 60px;
+    text-align: center;
+  }
+  .comparison h2 {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 400;
+    margin-bottom: 24px;
+    letter-spacing: 0.5px;
+  }
+  .comparison h2 em {
+    color: var(--gold);
+    font-style: italic;
+  }
+  .comp-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  .comp-table th {
+    font-family: var(--font-display);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--gold-dim);
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+  }
+  .comp-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(196,151,59,0.06);
+    color: var(--text2);
+  }
+  .comp-table tr td:first-child {
+    text-align: left;
+    color: var(--text);
+  }
+  .comp-table .yes { color: var(--gold); }
+  .comp-table .no { color: var(--text3); opacity: 0.5; }
+
+  /* ─── Footer ───────────────────────────────────────── */
+  .landing-footer {
+    text-align: center;
+    padding: 40px 24px;
+    border-top: 1px solid var(--border);
+  }
+  .landing-footer p {
+    font-family: var(--font-display);
+    font-size: 13px;
+    color: var(--text3);
+    font-style: italic;
+    letter-spacing: 1px;
+  }
+
+  /* ─── Animations ───────────────────────────────────── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .hero { animation: fadeUp 0.8s ease-out; }
+  .signup-card { animation: fadeUp 0.8s ease-out 0.2s both; }
+  .features { animation: fadeUp 0.8s ease-out 0.4s both; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-ornament">✦ ✦ ✦</div>
+    <h1>Your Books,<br>Read Aloud by <em>AI</em></h1>
+    <p class="subtitle">Upload any book. Listen in English, French, or Arabic with human-like neural voices.</p>
+    <p class="sub2">Free. No subscription. No limits.</p>
+
+    <!-- Signup -->
+    <div class="signup-card">
+      <div id="signupForm">
+        <h3>Start listening now</h3>
+        <p class="note">Enter your email to get free access</p>
+        <form id="emailForm" onsubmit="handleSignup(event)">
+          <div class="form-row">
+            <input type="text" id="signupName" placeholder="Your name" required>
+          </div>
+          <div class="form-row">
+            <input type="email" id="signupEmail" placeholder="Your email" required>
+          </div>
+          <button type="submit" class="btn-signup">Get Free Access</button>
+        </form>
+        <p class="form-privacy">No spam, ever. Unsubscribe anytime.</p>
+      </div>
+      <div class="signup-success" id="signupSuccess">
+        <div class="check">✦</div>
+        <h3>Welcome to BookVoice</h3>
+        <p>Your access is ready.</p>
+        <a href="/app" class="btn-enter">Open BookVoice</a>
+      </div>
+    </div>
+  </section>
+
+  <div class="hero-line">
+    <div class="line"></div>
+    <div class="diamond"></div>
+    <div class="line"></div>
+  </div>
+
+  <!-- Features -->
+  <section class="features">
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🎧</div>
+        <div class="feature-title">Neural Voices</div>
+        <div class="feature-desc">State-of-the-art AI voices that sound natural, not robotic</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🌍</div>
+        <div class="feature-title">3 Languages</div>
+        <div class="feature-desc">English, French, and Arabic — including Algerian, Moroccan & Egyptian dialects</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📚</div>
+        <div class="feature-title">Any Book Format</div>
+        <div class="feature-desc">PDF, EPUB, or plain text. Drop it in and listen</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <div class="feature-title">Instant Playback</div>
+        <div class="feature-desc">No waiting for processing. Chapter-by-chapter streaming</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎚️</div>
+        <div class="feature-title">Full Control</div>
+        <div class="feature-desc">Speed control, chapter navigation, text follow-along</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">💰</div>
+        <div class="feature-title">100% Free</div>
+        <div class="feature-desc">No subscription, no hidden fees. Speechify charges $139/yr. We don't.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Comparison -->
+  <section class="comparison">
+    <h2>How we compare to <em>Speechify</em></h2>
+    <table class="comp-table">
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th>BookVoice</th>
+          <th>Speechify</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>AI neural voices</td>
+          <td class="yes">✓</td>
+          <td class="yes">✓</td>
+        </tr>
+        <tr>
+          <td>PDF, EPUB, TXT</td>
+          <td class="yes">✓</td>
+          <td class="yes">✓</td>
+        </tr>
+        <tr>
+          <td>Arabic dialect voices</td>
+          <td class="yes">✓</td>
+          <td class="no">✗</td>
+        </tr>
+        <tr>
+          <td>French voices</td>
+          <td class="yes">✓</td>
+          <td class="yes">✓</td>
+        </tr>
+        <tr>
+          <td>Speed control</td>
+          <td class="yes">✓</td>
+          <td class="yes">✓</td>
+        </tr>
+        <tr>
+          <td>Price</td>
+          <td class="yes">Free</td>
+          <td class="no">$139/year</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Footer -->
+  <footer class="landing-footer">
+    <p>BookVoice — A personal library, read aloud</p>
+  </footer>
+
+</div>
+
+<script>
+async function handleSignup(e) {
+  e.preventDefault();
+  const name = document.getElementById("signupName").value.trim();
+  const email = document.getElementById("signupEmail").value.trim();
+  if (!name || !email) return;
+
+  const btn = document.querySelector(".btn-signup");
+  btn.textContent = "Joining…";
+  btn.disabled = true;
+
+  try {
+    const res = await fetch("/api/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email }),
+    });
+    const data = await res.json();
+
+    if (data.ok) {
+      document.getElementById("signupForm").style.display = "none";
+      document.getElementById("signupSuccess").style.display = "block";
+    } else {
+      alert(data.error || "Something went wrong. Please try again.");
+      btn.textContent = "Get Free Access";
+      btn.disabled = false;
+    }
+  } catch (err) {
+    alert("Connection error. Please try again.");
+    btn.textContent = "Get Free Access";
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
