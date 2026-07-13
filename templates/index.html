@@ -425,23 +425,72 @@
       0 0 50px rgba(196,151,59,0.15);
   }
 
+  .skip-btn {
+    position: relative;
+    font-size: 14px;
+  }
+  .skip-btn .skip-icon {
+    font-size: 20px;
+    line-height: 1;
+  }
+  .skip-btn .skip-label {
+    position: absolute;
+    font-size: 9px;
+    font-weight: 700;
+    font-family: var(--font-body);
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
   .progress-bar {
     width: 100%;
-    height: 4px;
+    height: 6px;
     background: rgba(196,151,59,0.1);
-    border-radius: 2px;
+    border-radius: 3px;
     cursor: pointer;
     position: relative;
-    overflow: hidden;
+    padding: 10px 0;
+    background-clip: content-box;
+  }
+  .progress-bar::before {
+    content: '';
+    position: absolute;
+    left: 0; right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 6px;
+    background: rgba(196,151,59,0.1);
+    border-radius: 3px;
   }
   .progress-fill {
-    height: 100%;
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 6px;
     background: linear-gradient(90deg, var(--gold-dim), var(--gold), var(--gold-bright));
-    border-radius: 2px;
+    border-radius: 3px;
     width: 0%;
     transition: width 0.1s linear;
     box-shadow: 0 0 8px rgba(196,151,59,0.3);
+    pointer-events: none;
   }
+  .progress-thumb {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--gold);
+    box-shadow: 0 0 10px rgba(196,151,59,0.5);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .progress-bar:hover .progress-thumb,
+  .progress-bar.dragging .progress-thumb { opacity: 1; }
   .progress-time {
     display: flex;
     justify-content: space-between;
@@ -741,12 +790,19 @@
       Now reading: <span id="nowReadingTitle">—</span>
     </div>
     <div class="player-controls">
-      <button class="btn-player" onclick="prevChapter()" title="Previous">⏮</button>
+      <button class="btn-player" onclick="prevChapter()" title="Previous chapter">⏮</button>
+      <button class="btn-player skip-btn" onclick="skipBack()" title="Back 10s">
+        <span class="skip-icon">↺</span><span class="skip-label">10</span>
+      </button>
       <button class="btn-player primary" id="playBtn" onclick="togglePlay()" title="Play">▶</button>
-      <button class="btn-player" onclick="nextChapter()" title="Next">⏭</button>
+      <button class="btn-player skip-btn" onclick="skipForward()" title="Forward 10s">
+        <span class="skip-icon">↻</span><span class="skip-label">10</span>
+      </button>
+      <button class="btn-player" onclick="nextChapter()" title="Next chapter">⏭</button>
     </div>
-    <div class="progress-bar" id="progressBar" onclick="seekAudio(event)">
+    <div class="progress-bar" id="progressBar">
       <div class="progress-fill" id="progressFill"></div>
+      <div class="progress-thumb" id="progressThumb"></div>
     </div>
     <div class="progress-time">
       <span id="currentTime">0:00</span>
@@ -849,13 +905,65 @@ function playAudio(){
 function pauseAudio(){if(currentAudio)currentAudio.pause();isPlaying=false;document.getElementById("playBtn").textContent="▶"}
 function stopAudio(){if(currentAudio){currentAudio.pause();currentAudio.currentTime=0}isPlaying=false;currentPartIdx=0;audioQueue=[];document.getElementById("playBtn").textContent="▶";document.getElementById("progressFill").style.width="0%";document.getElementById("currentTime").textContent="0:00";document.getElementById("totalTime").textContent="0:00"}
 
+function getTotalDuration(){let td=0;audioQueue.forEach(a=>{if(a.duration)td+=a.duration});return td}
+function getGlobalTime(){let eb=0;audioQueue.forEach((a,i)=>{if(i<currentPartIdx&&a.duration)eb+=a.duration});return currentAudio?eb+currentAudio.currentTime:eb}
+
 function updateProgress(){
-  if(!currentAudio||!currentAudio.duration)return;let td=0,eb=0;
-  audioQueue.forEach((a,i)=>{if(a.duration)td+=a.duration;if(i<currentPartIdx&&a.duration)eb+=a.duration});
-  const ce=eb+currentAudio.currentTime,p=td>0?(ce/td)*100:0;
-  document.getElementById("progressFill").style.width=p+"%";document.getElementById("currentTime").textContent=formatTime(ce);document.getElementById("totalTime").textContent=formatTime(td);
+  if(!currentAudio||!currentAudio.duration)return;
+  const td=getTotalDuration(),ce=getGlobalTime(),p=td>0?(ce/td)*100:0;
+  document.getElementById("progressFill").style.width=p+"%";
+  document.getElementById("progressThumb").style.left=p+"%";
+  document.getElementById("currentTime").textContent=formatTime(ce);
+  document.getElementById("totalTime").textContent=formatTime(td);
 }
-function seekAudio(e){if(!currentAudio||!currentAudio.duration)return;const b=document.getElementById("progressBar").getBoundingClientRect();currentAudio.currentTime=((e.clientX-b.left)/b.width)*currentAudio.duration}
+
+function seekToGlobal(targetTime){
+  if(audioQueue.length===0)return;
+  let cumulative=0;
+  for(let i=0;i<audioQueue.length;i++){
+    const dur=audioQueue[i].duration||0;
+    if(targetTime<=cumulative+dur){
+      const wasPlaying=isPlaying;
+      if(currentAudio)currentAudio.pause();
+      currentPartIdx=i;currentAudio=audioQueue[i];
+      currentAudio.currentTime=Math.max(0,targetTime-cumulative);
+      currentAudio.playbackRate=parseFloat(document.getElementById("speedSlider").value);
+      currentAudio.ontimeupdate=()=>updateProgress();
+      currentAudio.onended=()=>{currentPartIdx++;if(currentPartIdx<audioQueue.length)playAudio();else if(currentChapter<chapters.length-1){currentPartIdx=0;audioQueue=[];selectChapter(currentChapter+1);togglePlay()}else stopAudio()};
+      if(wasPlaying)currentAudio.play().catch(e=>console.error(e));
+      updateProgress();
+      return;
+    }
+    cumulative+=dur;
+  }
+}
+
+function seekFromEvent(e){
+  const td=getTotalDuration();if(td===0)return;
+  const b=document.getElementById("progressBar").getBoundingClientRect();
+  const ratio=Math.max(0,Math.min(1,(e.clientX-b.left)/b.width));
+  seekToGlobal(ratio*td);
+}
+
+function skipBack(){if(audioQueue.length===0||!currentAudio)return;seekToGlobal(Math.max(0,getGlobalTime()-10))}
+function skipForward(){
+  if(audioQueue.length===0||!currentAudio)return;
+  const td=getTotalDuration(),target=getGlobalTime()+10;
+  if(target>=td){if(currentChapter<chapters.length-1){stopAudio();selectChapter(currentChapter+1);togglePlay()}return}
+  seekToGlobal(target);
+}
+
+// Progress bar drag support
+(function(){
+  const bar=document.getElementById("progressBar");
+  let dragging=false;
+  bar.addEventListener("mousedown",e=>{dragging=true;bar.classList.add("dragging");seekFromEvent(e)});
+  document.addEventListener("mousemove",e=>{if(dragging)seekFromEvent(e)});
+  document.addEventListener("mouseup",()=>{if(dragging){dragging=false;bar.classList.remove("dragging")}});
+  bar.addEventListener("touchstart",e=>{dragging=true;bar.classList.add("dragging");seekFromEvent(e.touches[0])},{passive:true});
+  document.addEventListener("touchmove",e=>{if(dragging)seekFromEvent(e.touches[0])},{passive:true});
+  document.addEventListener("touchend",()=>{if(dragging){dragging=false;bar.classList.remove("dragging")}});
+})()
 function formatTime(s){if(!s||isNaN(s))return"0:00";return`${Math.floor(s/60)}:${Math.floor(s%60).toString().padStart(2,"0")}`}
 function updateSpeed(){const v=parseFloat(document.getElementById("speedSlider").value);document.getElementById("speedValue").textContent=v.toFixed(1)+"×";if(currentAudio)currentAudio.playbackRate=v}
 function prevChapter(){if(currentChapter>0){stopAudio();selectChapter(currentChapter-1)}}
