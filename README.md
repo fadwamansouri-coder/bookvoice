@@ -22,7 +22,7 @@ python app.py
 - **TTS Engines**:
   - **Edge TTS** (default) — Free, no API key needed, excellent neural voices
   - **OpenAI TTS-HD** (optional) — Premium quality, requires API key (~$15/1M characters)
-- **Controls**: Play/pause, chapter navigation, speed (0.5×–2×), text follow-along
+- **Controls**: Play/pause, skip ±10s, chapter navigation, speed (0.5×–2×), progress bar scrubbing, text follow-along
 - **Arabic support**: RTL text display, Amiri font, dialect-specific voices (MSA, Egyptian, Algerian, Moroccan)
 - **Auto-advance**: Automatically moves to the next chapter when one finishes
 - **Audio caching**: Generated audio is cached to avoid re-synthesis
